@@ -1,205 +1,201 @@
-const cells = document.querySelectorAll('.cell');
-const statusText = document.getElementById('status');
-const restartBtn = document.getElementById('restartBtn');
-const resetScoreBtn = document.getElementById('resetScoreBtn');
-const modeToggle = document.getElementById('modeToggle');
-const aiModeBtn = document.getElementById('aiMode');
-const twoPlayerModeBtn = document.getElementById('twoPlayerMode');
-const soundToggleBtn = document.getElementById('soundToggle');
+const boardEl = document.getElementById("board");
+const cells = document.querySelectorAll(".cell");
+const statusText = document.getElementById("statusText");
+const playerXScoreEl = document.getElementById("playerXScore");
+const playerOScoreEl = document.getElementById("playerOScore");
+const player1Label = document.getElementById("player1Label");
+const player2Label = document.getElementById("player2Label");
+const soundState = document.getElementById("soundState");
 
-const clickSound = document.getElementById('clickSound');
-const winSound = document.getElementById('winSound');
-const playerXScoreEl = document.getElementById('playerXScore');
-const playerOScoreEl = document.getElementById('playerOScore');
-const label1 = document.getElementById('player1Label');
-const label2 = document.getElementById('player2Label');
-
-let board = ["", "", "", "", "", "", "", "", ""];
 let currentPlayer = "X";
+let board = Array(9).fill("");
 let isGameActive = false;
-let mode = ""; // "ai" or "2p"
+let mode = "2p";
+let soundEnabled = true;
 let scores = { X: 0, O: 0 };
-let soundOn = true;
+let playerNames = { X: "Player X", O: "Player O" };
 
-const winningConditions = [
-  [0,1,2], [3,4,5], [6,7,8],
-  [0,3,6], [1,4,7], [2,5,8],
-  [0,4,8], [2,4,6]
-];
+const moveSound = new Audio("button.mp3");
+const winSound = new Audio("win.mp3");
 
-function playSound(sound) {
-  if (soundOn) {
-    sound.currentTime = 0;
-    sound.play().catch(err => {});
-  }
+function label(player) {
+  return playerNames[player] || player;
+}
+
+function startGame(selectedMode) {
+  mode = selectedMode;
+  playerNames.X = document.getElementById("playerXName").value || "Player X";
+  playerNames.O = document.getElementById("playerOName").value || (mode === "ai" ? "AI" : "Player O");
+
+  player1Label.textContent = `${label("X")}:`;
+  player2Label.textContent = `${label("O")}:`;
+
+  scores = loadScores(mode);
+  updateScoreDisplay();
+
+  resetBoard();
+  isGameActive = true;
+  if (currentPlayer === "O" && mode === "ai") aiMove();
 }
 
 function handleClick(e) {
-  const index = e.target.dataset.index;
+  const index = +e.target.dataset.index;
+  handleMove(index);
+}
+
+function handleMove(index) {
   if (!isGameActive || board[index] !== "") return;
 
-  makeMove(index, currentPlayer);
-  playSound(clickSound);
+  board[index] = currentPlayer;
+  cells[index].textContent = currentPlayer;
+  playSound(moveSound);
 
-  const winIndices = getWinningIndices(currentPlayer);
-  if (winIndices) {
-    animateWin(winIndices);
-
+  if (checkWinner(currentPlayer)) {
     statusText.textContent = `${label(currentPlayer)} Wins! 🎉`;
+    highlightWin(currentPlayer);
     playSound(winSound);
     scores[currentPlayer]++;
     saveScores();
     updateScoreDisplay();
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     isGameActive = false;
     return;
   }
 
-  if (board.every(cell => cell !== "")) {
-    statusText.textContent = "It's a Draw!";
+  if (!board.includes("")) {
+    statusText.textContent = "It's a draw!";
     isGameActive = false;
     return;
   }
 
-  if (mode === "ai" && currentPlayer === "X") {
-    currentPlayer = "O";
-    statusText.textContent = "AI's Turn";
+  currentPlayer = currentPlayer === "X" ? "O" : "X";
+  statusText.textContent = `${label(currentPlayer)}'s Turn`;
+
+  if (mode === "ai" && currentPlayer === "O") {
     setTimeout(aiMove, 500);
-  } else {
-    currentPlayer = currentPlayer === "X" ? "O" : "X";
-    statusText.textContent = `${label(currentPlayer)}'s Turn`;
   }
-}
-
-function makeMove(index, player) {
-  board[index] = player;
-  cells[index].textContent = player;
 }
 
 function aiMove() {
-  if (!isGameActive) return;
-
-  const emptyIndices = board.map((val, idx) => val === "" ? idx : null).filter(v => v !== null);
-  const index = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-  makeMove(index, "O");
-  playSound(clickSound);
-
-  if (checkWinner("O")) {
-    statusText.textContent = "AI Wins! 🤖";
-    scores.O++;
-    saveScores();
-    updateScoreDisplay();
-    playSound(winSound);
-    isGameActive = false;
-    return;
+  const bestMove = getBestMove();
+  if (bestMove !== -1) {
+    playSound(moveSound);
+    handleMove(bestMove);
   }
-
-  if (board.every(cell => cell !== "")) {
-    statusText.textContent = "It's a Draw!";
-    isGameActive = false;
-    return;
-  }
-
-  currentPlayer = "X";
-  statusText.textContent = "Your Turn";
 }
 
-function checkWinner(player) {
-  return winningConditions.some(condition => {
-    return condition.every(index => board[index] === player);
+function getBestMove() {
+  let bestScore = -Infinity;
+  let move = -1;
+  board.forEach((cell, i) => {
+    if (cell === "") {
+      board[i] = "O";
+      let score = minimax(board, 0, false);
+      board[i] = "";
+      if (score > bestScore) {
+        bestScore = score;
+        move = i;
+      }
+    }
   });
+  return move;
 }
 
-function restartGame() {
-  board = ["", "", "", "", "", "", "", "", ""];
-  isGameActive = mode !== "";
-  currentPlayer = "X";
-  statusText.textContent = isGameActive ? `${label(currentPlayer)}'s Turn` : "Select a Mode";
+function minimax(newBoard, depth, isMaximizing) {
+  if (checkWinner("O")) return 10 - depth;
+  if (checkWinner("X")) return depth - 10;
+  if (!newBoard.includes("")) return 0;
 
+  if (isMaximizing) {
+    let best = -Infinity;
+    newBoard.forEach((cell, i) => {
+      if (cell === "") {
+        newBoard[i] = "O";
+        best = Math.max(best, minimax(newBoard, depth + 1, false));
+        newBoard[i] = "";
+      }
+    });
+    return best;
+  } else {
+    let best = Infinity;
+    newBoard.forEach((cell, i) => {
+      if (cell === "") {
+        newBoard[i] = "X";
+        best = Math.min(best, minimax(newBoard, depth + 1, true));
+        newBoard[i] = "";
+      }
+    });
+    return best;
+  }
+}
+
+function resetBoard() {
+  board = Array(9).fill("");
   cells.forEach(cell => {
     cell.textContent = "";
-    cell.classList.remove("win-animate"); 
+    cell.classList.remove("win");
+  });
+  currentPlayer = "X";
+  statusText.textContent = `${label(currentPlayer)}'s Turn`;
+  isGameActive = true;
+  if (mode === "ai" && currentPlayer === "O") aiMove();
+}
+
+function highlightWin(player) {
+  const wins = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  wins.forEach(pattern => {
+    if (pattern.every(i => board[i] === player)) {
+      pattern.forEach(i => cells[i].classList.add("win"));
+    }
   });
 }
 
-function toggleDarkMode() {
-  document.body.classList.toggle("dark-mode");
-}
-
-function toggleSound() {
-  soundOn = !soundOn;
-  soundToggleBtn.textContent = soundOn ? "🔊 Sound: ON" : "🔇 Sound: OFF";
-}
-
-function label(player) {
-  const nameX = document.getElementById("nameX").value || "Player X";
-  const nameO = document.getElementById("nameO").value || (mode === "ai" ? "AI" : "Player O");
-  return player === "X" ? nameX : nameO;
-}
-
-
-function startGame(selectedMode) {
-  mode = selectedMode;
-  scores = loadScores(mode);
-  updateScoreDisplay();
-
-  label1.textContent = `${label("X")}:`;
-  label2.textContent = `${label("O")}:`;
-
-  restartGame();
-}
-
-
-function resetScores() {
-  scores = { X: 0, O: 0 };
-  updateScoreDisplay();
-  localStorage.removeItem(`tictactoe-${mode}-scores`);
-}
-
-
-function updateScoreDisplay() {
-  playerXScoreEl.textContent = scores.X ?? 0;
-  playerOScoreEl.textContent = scores.O ?? 0;
+function checkWinner(p) {
+  const winPatterns = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  return winPatterns.some(pattern => pattern.every(i => board[i] === p));
 }
 
 function saveScores() {
-  if (mode) {
-    localStorage.setItem(`tictactoe-${mode}-scores`, JSON.stringify(scores));
+  localStorage.setItem(`ttt_scores_${mode}`, JSON.stringify(scores));
+}
+
+function loadScores() {
+  return JSON.parse(localStorage.getItem(`ttt_scores_${mode}`)) || { X: 0, O: 0 };
+}
+
+function updateScoreDisplay() {
+  playerXScoreEl.textContent = scores["X"];
+  playerOScoreEl.textContent = scores["O"];
+}
+
+function resetScores() {
+  scores = { X: 0, O: 0 };
+  saveScores();
+  updateScoreDisplay();
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  soundState.textContent = soundEnabled ? "ON" : "OFF";
+}
+
+function playSound(sound) {
+  if (soundEnabled) {
+    sound.currentTime = 0;
+    sound.play();
   }
 }
 
-function loadScores(selectedMode) {
-  const stored = localStorage.getItem(`tictactoe-${selectedMode}-scores`);
-  return stored ? JSON.parse(stored) : { X: 0, O: 0 };
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
 }
 
-
-
-
-cells.forEach(cell => cell.addEventListener('click', handleClick));
-restartBtn.addEventListener('click', restartGame);
-modeToggle.addEventListener('click', toggleDarkMode);
-soundToggleBtn.addEventListener('click', toggleSound);
-resetScoreBtn.addEventListener('click', resetScores);
-aiModeBtn.addEventListener('click', () => startGame("ai"));
-twoPlayerModeBtn.addEventListener('click', () => startGame("2p"));
-
-
-function getWinningIndices(player) {
-  for (const condition of winningConditions) {
-    if (condition.every(i => board[i] === player)) {
-      return condition;
-    }
-  }
-  return null;
-}
-
-function animateWin(indices) {
-  indices.forEach(i => {
-    cells[i].classList.add('win-animate');
-  });
-}
+cells.forEach(cell => cell.addEventListener("click", handleClick));
