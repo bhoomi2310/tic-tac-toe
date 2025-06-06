@@ -5,65 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tic Tac Toe</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
 </head>
 <body>
-  <div class="container">
-    <h1>Tic Tac Toe</h1>
+  <h1>Tic Tac Toe</h1>
 
-    <div class="name-inputs">
-     <input type="text" id="nameX" placeholder="Player X Name" />
-     <input type="text" id="nameO" placeholder="Player O/AI Name" />
-    </div>
-
-
-    <div class="mode-select">
-      <button id="aiMode">Player vs AI</button>
-      <button id="twoPlayerMode">2 Players</button>
-    </div>
-
-    <div class="scoreboard">
-     <div class="score-item">
-      <span id="player1Label">Player X:</span>
-      <span id="playerXScore">0</span>
-     </div>
-     <div class="score-item">
-      <span id="player2Label">Player O:</span>
-      <span id="playerOScore">0</span>
-     </div>
-    </div>
-
-
-    <div id="game">
-      <div class="cell" data-index="0"></div>
-      <div class="cell" data-index="1"></div>
-      <div class="cell" data-index="2"></div>
-      <div class="cell" data-index="3"></div>
-      <div class="cell" data-index="4"></div>
-      <div class="cell" data-index="5"></div>
-      <div class="cell" data-index="6"></div>
-      <div class="cell" data-index="7"></div>
-      <div class="cell" data-index="8"></div>
-    </div>
-
-    <div id="status">Select a Mode</div>
-    <button id="restartBtn">🔁 Restart Game</button>
-    <button id="resetScoreBtn">🧹 Reset Scores</button>
-    <button id="soundToggle">🔊 Sound: ON</button>
-    <button id="modeToggle">🌙 Toggle Dark Mode</button>
-
+  <div class="name-inputs">
+    <input id="playerXName" placeholder="Player X Name" />
+    <input id="playerOName" placeholder="Player O/AI Name" />
   </div>
 
-  <audio id="clickSound" preload="auto">
-    <source src="button.mp3" type="audio/mpeg">
-  </audio>
+  <div class="mode-buttons">
+    <button onclick="startGame('ai')">Player vs AI</button>
+    <button onclick="startGame('2p')">2 Players</button>
+  </div>
 
-  <audio id="winSound" preload="auto">
-    <source src="win.mp3" type="audio/mpeg">
-  </audio>
+  <div class="scoreboard">
+    <div class="score-item">
+      <span id="player1Label">Player X:</span>
+      <span id="playerXScore">0</span>
+    </div>
+    <div class="score-item">
+      <span id="player2Label">Player O:</span>
+      <span id="playerOScore">0</span>
+    </div>
+  </div>
 
+  <div class="board" id="board">
+    <!-- 9 cells -->
+    <div class="cell" data-index="0"></div>
+    <div class="cell" data-index="1"></div>
+    <div class="cell" data-index="2"></div>
+    <div class="cell" data-index="3"></div>
+    <div class="cell" data-index="4"></div>
+    <div class="cell" data-index="5"></div>
+    <div class="cell" data-index="6"></div>
+    <div class="cell" data-index="7"></div>
+    <div class="cell" data-index="8"></div>
+  </div>
 
+  <p id="statusText">Select a mode to start!</p>
+
+  <div class="controls">
+    <button onclick="resetBoard()">🔁 Restart Game</button>
+    <button onclick="resetScores()">📝 Reset Scores</button>
+    <button onclick="toggleSound()">🔊 Sound: <span id="soundState">ON</span></button>
+    <button onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
